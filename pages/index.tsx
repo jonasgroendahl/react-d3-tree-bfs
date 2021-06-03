@@ -1,44 +1,128 @@
-import Head from "next/head";
-import styles from "../styles/Home.module.css";
-import Question from "../components/Question";
 import { Box, Stack } from "@chakra-ui/layout";
 import dynamic from "next/dynamic";
-import { QuestionDrawer } from "../components/QuestionDrawer";
-import { TreeNodeEventCallback } from "react-d3-tree/lib/Tree/types";
-import { useRootStore } from "../stores/rootStore";
-import { bfs } from "../utils/helper";
 import NodeModal from "../components/NodeModal";
 import { useState } from "react";
-import { TreeNodeDatum } from "react-d3-tree/lib/types/common";
+import {
+  CustomNodeElementProps,
+  RawNodeDatum,
+  TreeNodeDatum,
+} from "react-d3-tree/lib/types/common";
+import { v4 } from "uuid";
 
 const Tree = dynamic(() => import("react-d3-tree"), {
   ssr: false,
 });
 
-export default function Home() {
-  const { tree, setTree } = useRootStore();
-  const [node, setNode] = useState<TreeNodeDatum | undefined>();
-  const [isOpen, setIsOpen] = useState(false);
-  const close = () => setIsOpen(false);
+export function bfs(
+  id: string,
+  tree: RawNodeDatum | RawNodeDatum[],
+  node: RawNodeDatum
+) {
+  const queue: RawNodeDatum[] = [];
 
-  const handleNodeClick = (event) => {
-    //
+  queue.unshift(tree as RawNodeDatum);
+
+  while (queue.length > 0) {
+    const curNode = queue.pop();
+
+    if (curNode.attributes?.id === id) {
+      curNode.children.push(node);
+
+      return { ...tree };
+    }
+
+    const len = curNode.children.length;
+
+    for (let i = 0; i < len; i++) {
+      queue.unshift(curNode.children[i]);
+    }
+  }
+}
+
+export default function Home() {
+  const [tree, setTree] = useState<RawNodeDatum | RawNodeDatum[]>({
+    name: "Root",
+    attributes: {
+      id: "411d9783-85ba-41e5-a6a3-5e1cca3d294f",
+    },
+    children: [
+      {
+        name: "Root 1.1",
+        attributes: {
+          id: "411d9783-85ba-41e5-a6a3-5e1cca3d294f2",
+        },
+        children: [],
+      },
+      {
+        name: "Root 1.2",
+        attributes: {
+          id: "411d9783-85ba-41e5-a6a3-5e1cca3d294f3",
+        },
+        children: [],
+      },
+    ],
+  });
+  const [node, setNode] = useState<TreeNodeDatum | undefined>();
+
+  const close = () => setNode(undefined);
+
+  const handleNodeClick = (datum: TreeNodeDatum) => {
+    setNode(datum);
+  };
+
+  const handleSubmit = (familyMemberName: string) => {
+    const newTree = bfs(node.attributes?.id, tree, {
+      name: familyMemberName,
+      attributes: {
+        id: v4(),
+      },
+      children: [],
+    });
+
+    if (newTree) {
+      setTree(newTree);
+    }
+
+    setNode(undefined);
+  };
+
+  const renderRectSvgNode = (
+    customProps: CustomNodeElementProps,
+    click: (datum: TreeNodeDatum) => void
+  ) => {
+    const { nodeDatum } = customProps;
+
+    return (
+      <g>
+        <circle r="15" fill={"#777"} onClick={() => click(nodeDatum)} />
+        <text fill="black" strokeWidth="0.5" x="20" y="-5">
+          {nodeDatum.name}
+        </text>
+      </g>
+    );
   };
 
   return (
     <Stack direction="row" spacing="md">
-      <QuestionDrawer />
-      <div style={{ width: "100%", height: "100vh" }}>
+      <Box w="100%" h="100vh">
         <Tree
           data={tree}
           zoomable={true}
-          onNodeClick={(datum, event) => {
-            setNode(datum);
-            setIsOpen(true);
+          onNodeClick={handleNodeClick}
+          translate={{
+            x: 200,
+            y: 200,
           }}
+          renderCustomNodeElement={(nodeInfo) =>
+            renderRectSvgNode(nodeInfo, handleNodeClick)
+          }
         />
-        <NodeModal node={node} onClose={close} isOpen={isOpen} />
-      </div>
+        <NodeModal
+          onSubmit={(familyMemberName) => handleSubmit(familyMemberName)}
+          onClose={close}
+          isOpen={Boolean(node)}
+        />
+      </Box>
     </Stack>
   );
 }

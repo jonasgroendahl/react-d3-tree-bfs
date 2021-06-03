@@ -8,55 +8,42 @@ import {
   ModalHeader,
   ModalOverlay,
 } from "@chakra-ui/modal";
-import { Select } from "@chakra-ui/select";
+import { FormControl, FormLabel, Input } from "@chakra-ui/react";
 import React, { useState } from "react";
-import { TreeNodeDatum } from "react-d3-tree/lib/types/common";
-import { useRootStore } from "../stores/rootStore";
-import { bfs } from "../utils/helper";
 
 type Props = {
   isOpen: boolean;
   onClose: () => void;
-  node: TreeNodeDatum;
+  onSubmit: (txt: string) => void;
 };
 
-const NodeModal: React.FC<Props> = ({ isOpen, onClose, node }) => {
-  const { questions, setTree, tree } = useRootStore();
-  const [option, setOption] = useState();
-
-  const handleDone = () => {
-    const newTree = bfs(node.attributes.id, tree, JSON.parse(option));
-
-    console.log(newTree);
-
-    setTree({ ...newTree });
-
-    onClose();
-  };
+const NodeModal: React.FC<Props> = ({ isOpen, onClose, onSubmit }) => {
+  const [txt, setTxt] = useState("");
 
   return (
     <Modal isOpen={isOpen} onClose={onClose}>
       <ModalOverlay />
       <ModalContent>
-        <ModalHeader>Add question</ModalHeader>
+        <ModalHeader>Add family member</ModalHeader>
         <ModalCloseButton />
         <ModalBody>
-          <Select
-            placeholder="Select option"
-            onChange={(event) => {
-              console.log("opt", event.target.value);
-              setOption(event.target.value);
-            }}
-          >
-            {questions.map((q) => (
-              <option value={JSON.stringify(q)} key={q.text}>
-                {q.text}
-              </option>
-            ))}
-          </Select>
+          <FormControl>
+            <FormLabel>Name</FormLabel>
+            <Input
+              value={txt}
+              onChange={(event) => setTxt(event.target.value)}
+            />
+          </FormControl>
         </ModalBody>
         <ModalFooter>
-          <Button onClick={handleDone}>Done</Button>
+          <Button
+            color="blue.500"
+            variant="solid"
+            onClick={() => onSubmit(txt)}
+            disabled={!txt}
+          >
+            Add
+          </Button>
         </ModalFooter>
       </ModalContent>
     </Modal>
